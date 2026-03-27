@@ -33,16 +33,17 @@ Run them in order for the guided path, or jump to what interests you.
 
 ### Prerequisites
 
-- **Docker** + **Docker Compose** v2
+- **Docker** + **Docker Compose** v2 (the `docker compose` plugin, not legacy `docker-compose`)
 - **16 GB RAM** (8 GB minimum with smaller models)
 - **10 GB free disk** (models + containers)
 - **GPU optional** — NVIDIA for acceleration, but everything works on CPU
 - **macOS, Linux, or Windows** (WSL2)
+- **For verify scripts:** `curl` and `python3` on the host
 
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/jcarlson/kindling.git
+git clone https://github.com/enema-combatant/kindling.git
 cd kindling
 cp .env.example .env
 ```

@@ -14,8 +14,8 @@ services:
 
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: missions/04-specialization/Dockerfile
     container_name: kindling-specialist
     ports:
       - "5004:5004"

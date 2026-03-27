@@ -5,6 +5,7 @@ This is deliberately simple. No frameworks, no abstractions beyond the
 provider module. You can read every line and understand what's happening.
 """
 
+import json
 import sys
 import os
 
@@ -57,7 +58,8 @@ def stream_endpoint():
 
     def generate():
         for chunk in stream_chat(messages):
-            yield f"data: {chunk}\n\n"
+            # JSON-encode to handle newlines safely in SSE
+            yield f"data: {json.dumps(chunk)}\n\n"
         yield "data: [DONE]\n\n"
 
     return Response(

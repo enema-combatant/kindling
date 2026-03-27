@@ -37,8 +37,8 @@ services:
 
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: missions/03-voice/Dockerfile
     container_name: kindling-voice
     ports:
       - "5003:5003"

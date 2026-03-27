@@ -14,8 +14,8 @@ services:
 
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: missions/01-memory/Dockerfile
     container_name: kindling-memory
     ports:
       - "5001:5001"

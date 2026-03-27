@@ -225,7 +225,15 @@ def _call_anthropic(messages: list[dict], config) -> dict:
 def _parse_response(raw: dict, provider: str) -> dict:
     """
     Normalize provider responses into a common format:
-      {"content": str | None, "tool_calls": [{"name": ..., "arguments": ...}]}
+      {
+        "content": str | None,
+        "tool_calls": [{"name": ..., "arguments": ..., "id": ...}],
+        "raw_message": <provider-specific assistant message for appending to history>,
+      }
+
+    The raw_message is the provider's native assistant message structure.
+    It must be appended to messages before tool results so the conversation
+    history stays valid for the next API call.
     """
     if provider == "ollama":
         msg = raw.get("message", {})
@@ -237,11 +245,13 @@ def _parse_response(raw: dict, provider: str) -> dict:
                     {
                         "name": tc["function"]["name"],
                         "arguments": tc["function"]["arguments"],
+                        "id": None,  # Ollama doesn't use tool_call IDs
                     }
                     for tc in tool_calls
                 ],
+                "raw_message": msg,  # The full message dict with tool_calls
             }
-        return {"content": msg.get("content", ""), "tool_calls": []}
+        return {"content": msg.get("content", ""), "tool_calls": [], "raw_message": msg}
 
     elif provider == "openai":
         choice = raw["choices"][0]["message"]
@@ -253,11 +263,13 @@ def _parse_response(raw: dict, provider: str) -> dict:
                     {
                         "name": tc["function"]["name"],
                         "arguments": json.loads(tc["function"]["arguments"]),
+                        "id": tc["id"],  # Required for OpenAI tool results
                     }
                     for tc in tool_calls
                 ],
+                "raw_message": choice,  # The full message dict with tool_calls
             }
-        return {"content": choice.get("content", ""), "tool_calls": []}
+        return {"content": choice.get("content", ""), "tool_calls": [], "raw_message": choice}
 
     elif provider == "anthropic":
         content_blocks = raw.get("content", [])
@@ -268,14 +280,23 @@ def _parse_response(raw: dict, provider: str) -> dict:
                 tool_calls.append({
                     "name": block["name"],
                     "arguments": block["input"],
+                    "id": block["id"],  # Required for Anthropic tool_result
                 })
             elif block["type"] == "text":
                 text_parts.append(block["text"])
         if tool_calls:
-            return {"content": None, "tool_calls": tool_calls}
-        return {"content": "\n".join(text_parts), "tool_calls": []}
+            return {
+                "content": None,
+                "tool_calls": tool_calls,
+                "raw_message": content_blocks,  # The full content block list
+            }
+        return {
+            "content": "\n".join(text_parts),
+            "tool_calls": [],
+            "raw_message": content_blocks,
+        }
 
-    return {"content": str(raw), "tool_calls": []}
+    return {"content": str(raw), "tool_calls": [], "raw_message": None}
 
 
 def run_agent(query: str, max_iterations: int = 10) -> dict:
@@ -328,10 +349,21 @@ def run_agent(query: str, max_iterations: int = 10) -> dict:
                 "iterations": iteration,
             }
 
-        # 3. ACT — execute each tool call
+        # 3. ACT — execute each tool call and feed results back
+        #
+        # First, append the assistant's response to preserve the tool_calls
+        # in the conversation history. Each provider needs its own format.
+        if provider == "ollama":
+            messages.append(parsed["raw_message"])
+        elif provider in ("openai", "groq"):
+            messages.append(parsed["raw_message"])
+        elif provider == "anthropic":
+            messages.append({"role": "assistant", "content": parsed["raw_message"]})
+
         for tc in parsed["tool_calls"]:
             tool_name = tc["name"]
             tool_args = tc["arguments"]
+            tool_id = tc["id"]
 
             result = execute_tool(tool_name, tool_args)
 
@@ -341,15 +373,27 @@ def run_agent(query: str, max_iterations: int = 10) -> dict:
                 "result": result[:500],  # Truncate for the trace display
             })
 
-            # 4. OBSERVE — feed the result back to the LLM
-            messages.append({
-                "role": "assistant",
-                "content": f"Calling tool: {tool_name}",
-            })
-            messages.append({
-                "role": "user",
-                "content": f"Tool result from {tool_name}:\n{result}",
-            })
+            # 4. OBSERVE — feed the result back in provider-native format
+            if provider == "ollama":
+                messages.append({
+                    "role": "tool",
+                    "content": str(result),
+                })
+            elif provider in ("openai", "groq"):
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_id,
+                    "content": str(result),
+                })
+            elif provider == "anthropic":
+                messages.append({
+                    "role": "user",
+                    "content": [{
+                        "type": "tool_result",
+                        "tool_use_id": tool_id,
+                        "content": str(result),
+                    }],
+                })
 
     # Max iterations reached — return what we have
     return {

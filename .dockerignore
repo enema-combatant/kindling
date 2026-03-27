@@ -1,0 +1,19 @@
+# Exclude non-essential files from Docker build context
+# Build context is the project root (../.. from each mission)
+.git/
+.gitignore
+.dockerignore
+.env
+.env.example
+LICENSE
+README.md
+JOURNEY.md
+concepts/
+provider-guides/
+extensions/
+sandbox/
+**/__pycache__/
+**/*.pyc
+**/walkthrough.md
+**/extend.md
+**/verify.sh

@@ -14,8 +14,8 @@ services:
 
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: missions/05-agents/Dockerfile
     container_name: kindling-agents
     ports:
       - "5005:5005"

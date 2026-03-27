@@ -191,7 +191,11 @@
                         if (line.startsWith('data: ')) {
                             const data = line.slice(6);
                             if (data === '[DONE]') continue;
-                            fullText += data;
+                            try {
+                                fullText += JSON.parse(data);
+                            } catch (e) {
+                                fullText += data;
+                            }
                             aiMsg.textContent = fullText;
                         }
                     }

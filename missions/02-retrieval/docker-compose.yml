@@ -14,8 +14,8 @@ services:
 
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: missions/02-retrieval/Dockerfile
     container_name: kindling-retrieval
     ports:
       - "5002:5002"

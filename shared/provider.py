@@ -76,18 +76,14 @@ class _OllamaProvider:
 
     @staticmethod
     def embed(texts, config):
-        results = []
-        # Ollama embedding endpoint handles one text at a time
-        for text in texts:
-            resp = requests.post(
-                f"{config.ollama_base_url}/api/embed",
-                json={"model": config.embed_model, "input": text},
-                timeout=60,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            results.append(data["embeddings"][0])
-        return results
+        # Ollama /api/embed supports batch input — send all texts at once
+        resp = requests.post(
+            f"{config.ollama_base_url}/api/embed",
+            json={"model": config.embed_model, "input": texts},
+            timeout=120,
+        )
+        resp.raise_for_status()
+        return resp.json()["embeddings"]
 
     @staticmethod
     def stream(messages, config, **kwargs):

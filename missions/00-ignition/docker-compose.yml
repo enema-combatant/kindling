@@ -22,8 +22,8 @@ services:
 
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: missions/00-ignition/Dockerfile
     container_name: kindling-ignition
     ports:
       - "5000:5000"

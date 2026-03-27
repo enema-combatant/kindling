@@ -61,7 +61,8 @@ OLLAMA_BASE_URL=http://ollama:11434    # Default (Docker Compose)
 | CPU only, 16 GB RAM | `llama3.2:3b` | 2.0 GB | 8-15 t/s |
 | GPU (6+ GB VRAM) | `llama3.2:3b` | 2.0 GB | 30-60 t/s |
 | GPU (8+ GB VRAM) | `qwen3:8b` | 4.9 GB | 20-40 t/s |
-| GPU (12+ GB VRAM) | `llama3.3:70b` | — | Use Q4 quantization |
+| GPU (16+ GB VRAM) | `mistral:7b` | 4.1 GB | 40-80 t/s |
+| GPU (24+ GB VRAM) | `llama3.1:13b` | 7.9 GB | 25-50 t/s |
 
 The embedding model (`nomic-embed-text`) runs well on CPU. It's small (275 MB) and fast.
 
