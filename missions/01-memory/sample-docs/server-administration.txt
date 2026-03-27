@@ -1,0 +1,13 @@
+Server Administration Essentials
+
+Monitoring CPU utilization is critical for maintaining service quality. When a system's processor consistently runs above 80% utilization, response times degrade and processes may be killed by the out-of-memory manager. The Linux OOM killer selects processes based on memory consumption and oom_score_adj values. Services that must survive should have their oom_score_adj lowered.
+
+Disk space management requires proactive monitoring. A filesystem at 90% capacity behaves differently than one at 50% — write operations slow down, log rotation may fail, and databases can corrupt when they cannot extend their data files. Set alerts at 75% and take action at 85%.
+
+Memory management on Linux involves both physical RAM and swap space. When physical memory is exhausted, the kernel moves pages to swap, causing dramatic performance degradation. For database servers, disable swap entirely or set swappiness to 0, as the performance penalty of swapping database pages far exceeds the benefit of keeping more pages resident.
+
+Process management with systemd provides service lifecycle control. Units can be configured with restart policies, resource limits via cgroups, and dependency ordering. A common mistake is placing start rate limits in the wrong section — StartLimitBurst and StartLimitIntervalSec belong in the Unit section, not the Service section. Getting this wrong can cause a service to enter a failed state that requires manual intervention to clear.
+
+Log management is essential for debugging and compliance. Centralized logging via syslog or journald provides a single point of analysis. For high-volume services, log rotation prevents disk exhaustion. The logrotate utility handles compression, retention, and cleanup automatically when configured correctly.
+
+Certificate management for TLS requires tracking expiration dates and renewal procedures. Expired certificates cause immediate service outages that appear as connection refused errors to clients. Automated renewal via ACME or internal PKI reduces the risk of expiration-related incidents.

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kindling — Mission 03: Voice</title>
+    <style>
+        :root {
+            --bg: #1a1a2e; --surface: #16213e; --border: #0f3460;
+            --text: #e4e4e4; --text-dim: #8892a0; --accent: #e94560;
+            --accent-dim: #533483; --success: #4ecca3; --recording: #ff4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            background: var(--bg); color: var(--text);
+            max-width: 700px; margin: 0 auto; padding: 2rem;
+        }
+        h1 { color: var(--accent); font-size: 1rem; margin-bottom: 0.25rem; }
+        .subtitle { color: var(--text-dim); font-size: 0.8rem; margin-bottom: 2rem; }
+        .mic-area { text-align: center; margin: 2rem 0; }
+        #mic-btn {
+            width: 100px; height: 100px; border-radius: 50%;
+            background: var(--surface); border: 3px solid var(--border);
+            color: var(--text); font-size: 2.5rem; cursor: pointer;
+            transition: all 0.2s;
+        }
+        #mic-btn:hover { border-color: var(--accent); }
+        #mic-btn.recording {
+            background: var(--recording); border-color: var(--recording);
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .status {
+            margin-top: 1rem; color: var(--text-dim);
+            font-size: 0.85rem; min-height: 1.5rem;
+        }
+        .text-input-area {
+            display: flex; gap: 0.75rem; margin: 1.5rem 0;
+        }
+        .text-input-area input {
+            flex: 1; padding: 0.75rem; background: var(--surface);
+            border: 1px solid var(--border); border-radius: 6px;
+            color: var(--text); font-family: inherit; outline: none;
+        }
+        .text-input-area button {
+            padding: 0.75rem 1.5rem; background: var(--accent); border: none;
+            border-radius: 6px; color: white; font-family: inherit;
+            cursor: pointer; font-weight: 600;
+        }
+        .result {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1.25rem; margin-top: 1.5rem;
+        }
+        .result-label {
+            font-size: 0.75rem; color: var(--text-dim);
+            text-transform: uppercase; letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        .result-question { color: var(--accent); margin-bottom: 1rem; }
+        .result-answer { line-height: 1.6; margin-bottom: 1rem; }
+        .result-sources {
+            font-size: 0.8rem; color: var(--text-dim);
+            border-top: 1px solid var(--border); padding-top: 0.75rem;
+        }
+        .play-btn {
+            margin-top: 0.75rem; padding: 0.5rem 1rem;
+            background: var(--success); border: none; border-radius: 4px;
+            color: var(--bg); font-family: inherit; cursor: pointer;
+            font-weight: 600; font-size: 0.85rem;
+        }
+        .or-divider {
+            text-align: center; color: var(--text-dim);
+            font-size: 0.8rem; margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>KINDLING</h1>
+    <div class="subtitle">Mission 03: Voice — Speech I/O</div>
+
+    <div class="mic-area">
+        <button id="mic-btn" onclick="toggleRecording()">&#127908;</button>
+        <div class="status" id="status">Click the microphone and speak your question</div>
+    </div>
+
+    <div class="or-divider">— or type your question —</div>
+
+    <div class="text-input-area">
+        <input type="text" id="text-input" placeholder="Type a question..."
+               autocomplete="off">
+        <button onclick="askText()">Ask</button>
+    </div>
+
+    <div id="result-area"></div>
+
+    <script>
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+
+        const micBtn = document.getElementById('mic-btn');
+        const statusEl = document.getElementById('status');
+        const resultArea = document.getElementById('result-area');
+        const textInput = document.getElementById('text-input');
+
+        textInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') askText();
+        });
+
+        async function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                mediaRecorder.onstop = () => processRecording();
+
+                mediaRecorder.start();
+                isRecording = true;
+                micBtn.classList.add('recording');
+                statusEl.textContent = 'Listening... Click again to stop.';
+            } catch (err) {
+                statusEl.textContent = 'Microphone access denied. Use text input instead.';
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(t => t.stop());
+                isRecording = false;
+                micBtn.classList.remove('recording');
+                statusEl.textContent = 'Processing...';
+            }
+        }
+
+        async function processRecording() {
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('audio', blob, 'recording.webm');
+
+            statusEl.textContent = 'Transcribing speech...';
+
+            try {
+                const resp = await fetch('/ask-voice', { method: 'POST', body: formData });
+                const data = await resp.json();
+
+                if (data.error) {
+                    statusEl.textContent = 'Error: ' + data.error;
+                    return;
+                }
+
+                statusEl.textContent = 'Done!';
+                showResult(data);
+            } catch (err) {
+                statusEl.textContent = 'Error: ' + err.message;
+            }
+        }
+
+        async function askText() {
+            const question = textInput.value.trim();
+            if (!question) return;
+
+            textInput.value = '';
+            statusEl.textContent = 'Thinking...';
+
+            try {
+                const resp = await fetch('/ask-voice', {
+                    method: 'POST',
+                    body: createFormDataWithText(question),
+                });
+                const data = await resp.json();
+                statusEl.textContent = 'Done!';
+                showResult({ question, answer: data.answer, sources: data.sources });
+            } catch (err) {
+                statusEl.textContent = 'Error: ' + err.message;
+            }
+        }
+
+        function createFormDataWithText(text) {
+            // Create a minimal WAV with silence, then use the text endpoint
+            // Actually, let's just use the transcribe bypass
+            const fd = new FormData();
+            const blob = new Blob([], { type: 'audio/webm' });
+            fd.append('audio', blob, 'empty.webm');
+            fd.append('text_override', text);
+            return fd;
+        }
+
+        function showResult(data) {
+            resultArea.textContent = '';
+
+            const card = document.createElement('div');
+            card.className = 'result';
+
+            const qLabel = document.createElement('div');
+            qLabel.className = 'result-label';
+            qLabel.textContent = 'Question';
+
+            const question = document.createElement('div');
+            question.className = 'result-question';
+            question.textContent = data.question;
+
+            const aLabel = document.createElement('div');
+            aLabel.className = 'result-label';
+            aLabel.textContent = 'Answer';
+
+            const answer = document.createElement('div');
+            answer.className = 'result-answer';
+            answer.textContent = data.answer;
+
+            card.appendChild(qLabel);
+            card.appendChild(question);
+            card.appendChild(aLabel);
+            card.appendChild(answer);
+
+            // Play button for TTS
+            const playBtn = document.createElement('button');
+            playBtn.className = 'play-btn';
+            playBtn.textContent = 'Listen to Answer';
+            playBtn.onclick = () => playAnswer(data.answer);
+            card.appendChild(playBtn);
+
+            // Sources
+            if (data.sources && data.sources.length > 0) {
+                const srcDiv = document.createElement('div');
+                srcDiv.className = 'result-sources';
+                srcDiv.textContent = 'Sources: ' + data.sources.map(
+                    s => s.source + ' (' + (s.similarity * 100).toFixed(0) + '%)'
+                ).join(', ');
+                card.appendChild(srcDiv);
+            }
+
+            resultArea.appendChild(card);
+        }
+
+        async function playAnswer(text) {
+            statusEl.textContent = 'Generating speech...';
+            try {
+                const resp = await fetch('/speak', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text }),
+                });
+                const audioBlob = await resp.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                audio.play();
+                statusEl.textContent = 'Playing...';
+                audio.onended = () => { statusEl.textContent = 'Done!'; };
+            } catch (err) {
+                statusEl.textContent = 'TTS error: ' + err.message;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kindling — Mission 04: {{ domain_name }}</title>
+    <style>
+        :root {
+            --bg: #1a1a2e; --surface: #16213e; --border: #0f3460;
+            --text: #e4e4e4; --text-dim: #8892a0; --accent: #e94560;
+            --accent-dim: #533483; --success: #4ecca3; --source-bg: #0d1b2a;
+            --warn: #f0a500; --fail: #e94560;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            background: var(--bg); color: var(--text);
+            height: 100vh; display: flex; flex-direction: column;
+        }
+        header {
+            padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 1rem;
+        }
+        header h1 { font-size: 1rem; font-weight: 600; color: var(--accent); }
+        header .domain-name { font-size: 0.85rem; color: var(--success); font-weight: 600; }
+        header span { font-size: 0.8rem; color: var(--text-dim); }
+        header .spacer { flex: 1; }
+        #eval-btn {
+            padding: 0.5rem 1rem; background: var(--accent-dim); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text); font-family: inherit;
+            font-size: 0.8rem; cursor: pointer;
+        }
+        #eval-btn:hover { background: var(--accent); }
+        #eval-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .main-area { flex: 1; display: flex; overflow: hidden; }
+        #chat-panel { flex: 2; display: flex; flex-direction: column; }
+        #side-panel {
+            flex: 1; border-left: 1px solid var(--border);
+            overflow-y: auto; display: flex; flex-direction: column;
+        }
+        #sources-section, #eval-section {
+            padding: 1rem; border-bottom: 1px solid var(--border);
+        }
+        #eval-section { display: none; }
+        .section-title {
+            font-size: 0.8rem; color: var(--text-dim);
+            margin-bottom: 0.75rem; text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .source-card {
+            background: var(--source-bg); border: 1px solid var(--border);
+            border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem;
+            font-size: 0.8rem;
+        }
+        .source-card .source-name {
+            color: var(--accent); font-size: 0.75rem; margin-bottom: 0.4rem;
+        }
+        .source-card .source-sim {
+            color: var(--success); font-size: 0.7rem; float: right;
+        }
+        .source-card .source-text {
+            color: var(--text-dim); line-height: 1.4;
+            max-height: 6rem; overflow-y: auto;
+        }
+        .eval-summary {
+            background: var(--source-bg); border: 1px solid var(--border);
+            border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+        }
+        .eval-summary .pass-rate { font-size: 1.2rem; font-weight: 700; }
+        .eval-summary .pass-rate.good { color: var(--success); }
+        .eval-summary .pass-rate.warn { color: var(--warn); }
+        .eval-summary .pass-rate.bad { color: var(--fail); }
+        .eval-item {
+            background: var(--source-bg); border: 1px solid var(--border);
+            border-radius: 6px; padding: 0.6rem; margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+        }
+        .eval-item .status { font-weight: 700; margin-right: 0.5rem; }
+        .eval-item .status.pass { color: var(--success); }
+        .eval-item .status.fail { color: var(--fail); }
+        .eval-item .question { color: var(--text); margin-bottom: 0.3rem; }
+        .eval-item .details { color: var(--text-dim); font-size: 0.7rem; }
+        #chat-container {
+            flex: 1; overflow-y: auto; padding: 1.5rem;
+            display: flex; flex-direction: column; gap: 1rem;
+        }
+        .message {
+            max-width: 90%; padding: 0.75rem 1rem; border-radius: 8px;
+            line-height: 1.5; font-size: 0.9rem; white-space: pre-wrap;
+        }
+        .message.user {
+            align-self: flex-end; background: #0f3460;
+            border: 1px solid var(--border);
+        }
+        .message.assistant {
+            align-self: flex-start; background: #1a1a3e;
+            border: 1px solid var(--accent-dim);
+        }
+        .message.system {
+            align-self: center; color: var(--text-dim);
+            font-size: 0.8rem; font-style: italic;
+        }
+        .message.thinking { color: var(--text-dim); }
+        .message.thinking::after {
+            content: ' ...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: ' '; } 40% { content: ' .'; }
+            60% { content: ' ..'; } 80%, 100% { content: ' ...'; }
+        }
+        #input-area {
+            padding: 1rem 1.5rem; border-top: 1px solid var(--border);
+            display: flex; gap: 0.75rem;
+        }
+        #input-area input {
+            flex: 1; padding: 0.75rem 1rem; background: var(--surface);
+            border: 1px solid var(--border); border-radius: 6px;
+            color: var(--text); font-family: inherit; font-size: 0.9rem;
+            outline: none;
+        }
+        #input-area input:focus { border-color: var(--accent); }
+        #input-area button {
+            padding: 0.75rem 1.5rem; background: var(--accent); border: none;
+            border-radius: 6px; color: white; font-family: inherit;
+            font-size: 0.9rem; cursor: pointer; font-weight: 600;
+        }
+        #input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>KINDLING</h1>
+        <span>Mission 04:</span>
+        <span class="domain-name" id="domain-name"></span>
+        <span class="spacer"></span>
+        <button id="eval-btn" onclick="runTests()">Run Tests</button>
+    </header>
+
+    <div class="main-area">
+        <div id="chat-panel">
+            <div id="chat-container">
+                <div class="message system" id="greeting-msg"></div>
+            </div>
+            <div id="input-area">
+                <input type="text" id="query-input"
+                       placeholder="Ask the domain expert a question..."
+                       autofocus autocomplete="off">
+                <button id="ask-btn" onclick="askQuestion()">Ask</button>
+            </div>
+        </div>
+
+        <div id="side-panel">
+            <div id="eval-section">
+                <h3 class="section-title">Test Results</h3>
+                <div id="eval-results"></div>
+            </div>
+            <div id="sources-section">
+                <h3 class="section-title">Retrieved Sources</h3>
+                <div id="sources-list">
+                    <div style="color: var(--text-dim); font-size: 0.8rem; font-style: italic;">
+                        Sources will appear here when you ask a question.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var domainName = {{ domain_name | tojson }};
+        var greeting = {{ greeting | tojson }};
+
+        document.getElementById('domain-name').textContent = domainName;
+        document.getElementById('greeting-msg').textContent = greeting;
+
+        var chatContainer = document.getElementById('chat-container');
+        var queryInput = document.getElementById('query-input');
+        var askBtn = document.getElementById('ask-btn');
+        var sourcesList = document.getElementById('sources-list');
+
+        queryInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !askBtn.disabled) askQuestion();
+        });
+
+        function askQuestion() {
+            var query = queryInput.value.trim();
+            if (!query) return;
+
+            appendMessage('user', query);
+            queryInput.value = '';
+            askBtn.disabled = true;
+
+            var aiMsg = appendMessage('assistant', 'Retrieving context');
+            aiMsg.classList.add('thinking');
+
+            sourcesList.textContent = '';
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: query }),
+            })
+            .then(function(response) {
+                var reader = response.body.getReader();
+                var decoder = new TextDecoder();
+                var fullText = '';
+                var buffer = '';
+
+                aiMsg.classList.remove('thinking');
+                aiMsg.textContent = '';
+
+                function read() {
+                    reader.read().then(function(result) {
+                        if (result.done) {
+                            askBtn.disabled = false;
+                            queryInput.focus();
+                            return;
+                        }
+
+                        buffer += decoder.decode(result.value, { stream: true });
+                        var lines = buffer.split('\n');
+                        buffer = lines.pop();
+
+                        for (var i = 0; i < lines.length; i++) {
+                            var line = lines[i];
+                            if (line.indexOf('event: sources') === 0) {
+                                continue;
+                            }
+                            if (line.indexOf('data: ') === 0) {
+                                var data = line.slice(6);
+                                if (data === '[DONE]') continue;
+
+                                try {
+                                    var sources = JSON.parse(data);
+                                    if (Array.isArray(sources) && sources.length > 0 && sources[0].source) {
+                                        renderSources(sources);
+                                        continue;
+                                    }
+                                } catch (e) {
+                                    // Not JSON -- it is a text token
+                                }
+
+                                fullText += data;
+                                aiMsg.textContent = fullText;
+                            }
+                        }
+
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                        read();
+                    });
+                }
+
+                read();
+            })
+            .catch(function(err) {
+                aiMsg.classList.remove('thinking');
+                aiMsg.textContent = 'Error: ' + err.message;
+                askBtn.disabled = false;
+                queryInput.focus();
+            });
+        }
+
+        function renderSources(sources) {
+            sourcesList.textContent = '';
+            for (var i = 0; i < sources.length; i++) {
+                var s = sources[i];
+                var card = document.createElement('div');
+                card.className = 'source-card';
+
+                var name = document.createElement('div');
+                name.className = 'source-name';
+                name.textContent = s.source;
+
+                var sim = document.createElement('span');
+                sim.className = 'source-sim';
+                sim.textContent = (s.similarity * 100).toFixed(1) + '%';
+                name.appendChild(sim);
+
+                var text = document.createElement('div');
+                text.className = 'source-text';
+                text.textContent = s.text;
+
+                card.appendChild(name);
+                card.appendChild(text);
+                sourcesList.appendChild(card);
+            }
+        }
+
+        function appendMessage(role, text) {
+            var div = document.createElement('div');
+            div.className = 'message ' + role;
+            div.textContent = text;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return div;
+        }
+
+        function runTests() {
+            var evalBtn = document.getElementById('eval-btn');
+            var evalSection = document.getElementById('eval-section');
+            var evalResults = document.getElementById('eval-results');
+
+            evalBtn.disabled = true;
+            evalBtn.textContent = 'Running...';
+            evalSection.style.display = 'block';
+            evalResults.textContent = 'Running test suite...';
+
+            fetch('/evaluate')
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                evalResults.textContent = '';
+
+                // Summary card
+                var summary = document.createElement('div');
+                summary.className = 'eval-summary';
+
+                var rateEl = document.createElement('div');
+                rateEl.className = 'pass-rate';
+                if (data.pass_rate >= 80) {
+                    rateEl.classList.add('good');
+                } else if (data.pass_rate >= 50) {
+                    rateEl.classList.add('warn');
+                } else {
+                    rateEl.classList.add('bad');
+                }
+                rateEl.textContent = data.pass_rate + '% pass rate';
+
+                var counts = document.createElement('div');
+                counts.style.color = 'var(--text-dim)';
+                counts.style.fontSize = '0.8rem';
+                counts.style.marginTop = '0.3rem';
+                counts.textContent = data.passed + ' passed / ' + data.failed + ' failed / ' + data.total + ' total';
+
+                summary.appendChild(rateEl);
+                summary.appendChild(counts);
+                evalResults.appendChild(summary);
+
+                // Per-question results
+                for (var i = 0; i < data.results.length; i++) {
+                    var r = data.results[i];
+                    var item = document.createElement('div');
+                    item.className = 'eval-item';
+
+                    var status = document.createElement('span');
+                    status.className = 'status';
+                    if (r.passed) {
+                        status.classList.add('pass');
+                        status.textContent = 'PASS';
+                    } else {
+                        status.classList.add('fail');
+                        status.textContent = 'FAIL';
+                    }
+
+                    var question = document.createElement('div');
+                    question.className = 'question';
+                    question.appendChild(status);
+                    var qText = document.createTextNode(' ' + r.question);
+                    question.appendChild(qText);
+
+                    var details = document.createElement('div');
+                    details.className = 'details';
+                    var detailParts = [];
+                    if (r.found_keywords.length > 0) {
+                        detailParts.push('Found: ' + r.found_keywords.join(', '));
+                    }
+                    if (r.missing_keywords.length > 0) {
+                        detailParts.push('Missing: ' + r.missing_keywords.join(', '));
+                    }
+                    if (!r.source_found && r.expected_source) {
+                        detailParts.push('Expected source not retrieved: ' + r.expected_source);
+                    }
+                    details.textContent = detailParts.join(' | ');
+
+                    item.appendChild(question);
+                    item.appendChild(details);
+                    evalResults.appendChild(item);
+                }
+
+                evalBtn.disabled = false;
+                evalBtn.textContent = 'Run Tests';
+            })
+            .catch(function(err) {
+                evalResults.textContent = 'Error running tests: ' + err.message;
+                evalBtn.disabled = false;
+                evalBtn.textContent = 'Run Tests';
+            });
+        }
+    </script>
+</body>
+</html>

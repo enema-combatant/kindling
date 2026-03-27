@@ -1,0 +1,65 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: kindling-ollama-03
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  whisper:
+    image: fedirz/faster-whisper-server:latest-cpu
+    container_name: kindling-whisper
+    ports:
+      - "8100:8000"
+    environment:
+      - WHISPER__MODEL=Systran/faster-whisper-base.en
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  piper:
+    image: rhasspy/wyoming-piper:latest
+    container_name: kindling-piper
+    ports:
+      - "10200:10200"
+    command: --voice en_US-lessac-medium
+    volumes:
+      - piper-data:/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kindling-voice
+    ports:
+      - "5003:5003"
+    env_file:
+      - ../../.env
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHISPER_URL=http://whisper:8000
+      - PIPER_HOST=piper
+      - PIPER_PORT=10200
+      - CHROMA_PATH=/data/chromadb
+    volumes:
+      - chroma-data:/data/chromadb
+      - ../01-memory/sample-docs:/app/sample-docs:ro
+    depends_on:
+      ollama:
+        condition: service_healthy
+      whisper:
+        condition: service_healthy
+
+volumes:
+  ollama-data:
+  chroma-data:
+  piper-data:

@@ -1,0 +1,14 @@
+# Test Questions Template
+#
+# Define questions to verify your domain expert answers correctly.
+# Run tests via the "Run Tests" button in the UI or GET /evaluate.
+#
+# For each question, list:
+#   - question: The question to ask
+#   - expected_keywords: Words that should appear in a correct answer
+#   - expected_source: The corpus file that should be retrieved
+
+questions: []
+  # - question: "Your test question here?"
+  #   expected_keywords: ["keyword1", "keyword2"]
+  #   expected_source: "your-document.txt"

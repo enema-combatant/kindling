@@ -1,0 +1,15 @@
+Infrastructure Security Fundamentals
+
+Defense in depth requires multiple overlapping security controls. No single control is sufficient — firewalls can be bypassed, passwords can be stolen, patches can be delayed. The goal is to ensure that compromising one layer does not grant access to the entire environment.
+
+Network segmentation limits lateral movement after a breach. VLANs separate broadcast domains, and firewall rules between VLANs control which traffic flows are permitted. A compromised workstation on VLAN 30 should not be able to directly access database servers on VLAN 20 without traversing a firewall that enforces access policies.
+
+Authentication should use multi-factor methods wherever possible. Something you know (password) combined with something you have (hardware token, phone) dramatically reduces the effectiveness of credential theft. For infrastructure access, SSH key authentication is preferred over passwords, and key rotation should occur on a regular schedule.
+
+Encryption protects data in transit and at rest. TLS for network communications is non-negotiable for any service carrying sensitive data. Full-disk encryption (LUKS on Linux, BitLocker on Windows) protects data at rest against physical theft. Key management is the hard part — keys must be stored securely, rotated periodically, and recoverable in disaster scenarios.
+
+Patch management balances security with stability. Critical vulnerabilities should be patched within days. Less severe issues can follow a regular maintenance window. Automated patching tools reduce the window of exposure but require testing to prevent breaking changes. Always have a rollback plan before applying patches to production systems.
+
+Logging and monitoring provide visibility into security events. Failed authentication attempts, unusual network traffic patterns, and privilege escalation events should all generate alerts. Security information and event management systems correlate events across multiple sources to identify attack patterns that individual log sources might miss.
+
+Incident response requires documented procedures and practice. When a security incident occurs, responders need to know who to contact, how to contain the breach, how to preserve evidence, and how to recover. Regular tabletop exercises and simulated incidents keep the team prepared and identify gaps in the response plan.

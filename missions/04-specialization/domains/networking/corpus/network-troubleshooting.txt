@@ -1,0 +1,13 @@
+Network Troubleshooting Guide
+
+When a host cannot reach the gateway, the first step is to verify layer 2 connectivity. Check that the Ethernet link light is active on both the host NIC and the switch port. If the link light is off, the physical cable may be damaged or disconnected.
+
+If layer 2 is confirmed, verify the IP configuration. The host must have an address in the correct subnet, the correct subnet mask, and the gateway address must be reachable. Use ping to test connectivity to the gateway. If ping fails, check for VLAN misconfigurations — the host port and gateway port must be in the same VLAN.
+
+For intermittent connectivity issues, packet loss is often caused by duplex mismatches between the host and switch. Auto-negotiation failures can result in the host running at full duplex while the switch is at half duplex. This causes late collisions and frame drops under load.
+
+DNS resolution failures present differently. The host may be able to ping IP addresses but not resolve hostnames. Verify that the DNS server addresses are correctly configured and that the DNS server is reachable. Common causes include firewall rules blocking UDP port 53 or the DNS server being overloaded.
+
+When troubleshooting wireless connectivity, signal strength is the primary factor. A device may associate with an access point but experience poor performance if the signal-to-noise ratio is too low. Physical obstructions, co-channel interference from neighboring APs, and distance all affect signal quality.
+
+Load balancer health check failures can cause intermittent outages even when backend servers are functional. If the health check endpoint returns errors or times out, the load balancer marks the server as down and stops routing traffic to it. Verify that health check endpoints are lightweight and respond quickly.

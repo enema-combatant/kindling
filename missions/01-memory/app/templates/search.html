@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kindling — Mission 01: Memory</title>
+    <style>
+        :root {
+            --bg: #1a1a2e; --surface: #16213e; --border: #0f3460;
+            --text: #e4e4e4; --text-dim: #8892a0; --accent: #e94560;
+            --accent-dim: #533483; --success: #4ecca3;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            background: var(--bg); color: var(--text);
+            max-width: 900px; margin: 0 auto; padding: 2rem;
+        }
+        h1 { color: var(--accent); font-size: 1rem; margin-bottom: 0.25rem; }
+        .subtitle { color: var(--text-dim); font-size: 0.8rem; margin-bottom: 2rem; }
+        .stats { color: var(--text-dim); font-size: 0.8rem; margin-bottom: 1.5rem; }
+        .search-box {
+            display: flex; gap: 0.75rem; margin-bottom: 2rem;
+        }
+        .search-box input {
+            flex: 1; padding: 0.75rem 1rem; background: var(--surface);
+            border: 1px solid var(--border); border-radius: 6px;
+            color: var(--text); font-family: inherit; font-size: 0.9rem;
+            outline: none;
+        }
+        .search-box input:focus { border-color: var(--accent); }
+        .search-box button {
+            padding: 0.75rem 1.5rem; background: var(--accent); border: none;
+            border-radius: 6px; color: white; font-family: inherit;
+            font-size: 0.9rem; cursor: pointer; font-weight: 600;
+        }
+        .result {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem; margin-bottom: 1rem;
+        }
+        .result-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .result-source { color: var(--accent); font-size: 0.8rem; }
+        .result-score { font-size: 0.8rem; }
+        .result-score .high { color: var(--success); }
+        .result-score .medium { color: #f0a500; }
+        .result-score .low { color: var(--text-dim); }
+        .result-text {
+            font-size: 0.85rem; line-height: 1.6; color: var(--text);
+            white-space: pre-wrap;
+        }
+        .empty-state {
+            text-align: center; color: var(--text-dim); padding: 3rem;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>KINDLING</h1>
+    <div class="subtitle">Mission 01: Memory — Semantic Search</div>
+    <div class="stats" id="stats">Documents indexed: {{ doc_count }} chunks</div>
+
+    <div class="search-box">
+        <input type="text" id="query-input"
+               placeholder="Search by meaning, not keywords..."
+               autofocus autocomplete="off">
+        <button onclick="doSearch()">Search</button>
+    </div>
+
+    <div id="results">
+        <div class="empty-state">
+            Try searching for a concept. The results are ranked by semantic
+            similarity — not keyword matching.
+        </div>
+    </div>
+
+    <script>
+        const queryInput = document.getElementById('query-input');
+        const resultsDiv = document.getElementById('results');
+
+        queryInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') doSearch();
+        });
+
+        async function doSearch() {
+            const query = queryInput.value.trim();
+            if (!query) return;
+
+            resultsDiv.textContent = 'Searching...';
+
+            try {
+                const resp = await fetch('/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, top_k: 5 }),
+                });
+                const data = await resp.json();
+
+                if (!data.results || data.results.length === 0) {
+                    resultsDiv.textContent = 'No results found.';
+                    return;
+                }
+
+                // Clear and rebuild results using DOM methods (no innerHTML)
+                resultsDiv.textContent = '';
+
+                data.results.forEach((r, i) => {
+                    const card = document.createElement('div');
+                    card.className = 'result';
+
+                    const header = document.createElement('div');
+                    header.className = 'result-header';
+
+                    const source = document.createElement('span');
+                    source.className = 'result-source';
+                    source.textContent = r.source;
+
+                    const score = document.createElement('span');
+                    score.className = 'result-score';
+                    const scoreVal = document.createElement('span');
+                    const sim = r.similarity;
+                    scoreVal.className = sim > 0.7 ? 'high' : sim > 0.4 ? 'medium' : 'low';
+                    scoreVal.textContent = (sim * 100).toFixed(1) + '% similar';
+                    score.appendChild(scoreVal);
+
+                    header.appendChild(source);
+                    header.appendChild(score);
+
+                    const text = document.createElement('div');
+                    text.className = 'result-text';
+                    text.textContent = r.text;
+
+                    card.appendChild(header);
+                    card.appendChild(text);
+                    resultsDiv.appendChild(card);
+                });
+
+            } catch (err) {
+                resultsDiv.textContent = 'Error: ' + err.message;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: kindling-ollama-01
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kindling-memory
+    ports:
+      - "5001:5001"
+    env_file:
+      - ../../.env
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - CHROMA_PATH=/data/chromadb
+    volumes:
+      - chroma-data:/data/chromadb
+      - ./sample-docs:/app/sample-docs:ro
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+volumes:
+  ollama-data:
+  chroma-data:

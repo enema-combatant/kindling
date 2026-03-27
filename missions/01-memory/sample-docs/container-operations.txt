@@ -1,0 +1,15 @@
+Container Operations Guide
+
+Container runtimes provide process isolation through Linux namespaces and resource control through cgroups. Docker and Podman are the two dominant runtimes. Podman offers rootless operation by default, which reduces the attack surface compared to Docker's daemon architecture.
+
+Image management follows a layered filesystem model. Each instruction in a Dockerfile creates a new layer. Layers are cached and shared between images, so ordering instructions from least-frequently-changed to most-frequently-changed optimizes build times. Place package installation before application code copying.
+
+Networking in containers uses bridge networks by default. Each container gets a virtual ethernet interface connected to a bridge on the host. Port mapping exposes container ports to the host network. For container-to-container communication on the same host, use a shared network rather than port mapping — it avoids the overhead of NAT traversal.
+
+Storage persistence requires explicit volume configuration. Container filesystems are ephemeral — when a container is removed, all data in its filesystem is lost. Named volumes and bind mounts provide persistent storage that survives container lifecycle events. For databases, always use named volumes mapped to reliable storage.
+
+Health checks enable automated container lifecycle management. A health check is a command that runs periodically inside the container to verify the application is functioning. If the health check fails repeatedly, the container runtime can restart the container automatically. Health checks should test actual functionality, not just process existence.
+
+Resource limits prevent runaway containers from consuming all host resources. Memory limits trigger the OOM killer when exceeded. CPU limits throttle processing. Without limits, a single misbehaving container can starve other workloads on the same host. Set limits based on observed peak usage plus a 20% buffer.
+
+Orchestration systems like Kubernetes and Docker Swarm manage container placement, scaling, and recovery across multiple hosts. For single-host deployments, systemd with Podman Quadlet provides similar lifecycle management without the complexity of a cluster orchestrator.

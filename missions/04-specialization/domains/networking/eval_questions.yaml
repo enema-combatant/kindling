@@ -1,0 +1,10 @@
+questions:
+  - question: "A host can't reach the gateway. What should I check first?"
+    expected_keywords: ["layer 2", "link light", "cable", "physical"]
+    expected_source: "network-troubleshooting.txt"
+  - question: "Users are experiencing intermittent packet loss. What could cause this?"
+    expected_keywords: ["duplex", "mismatch", "collision"]
+    expected_source: "network-troubleshooting.txt"
+  - question: "DNS lookups are failing but pings work. What's wrong?"
+    expected_keywords: ["DNS", "port 53", "firewall"]
+    expected_source: "network-troubleshooting.txt"
