@@ -179,7 +179,7 @@ class _AnthropicProvider:
     def _headers(config):
         return {
             "x-api-key": config.anthropic_api_key,
-            "anthropic-version": "2023-06-01",
+            "anthropic-version": "2025-01-01",
             "Content-Type": "application/json",
         }
 

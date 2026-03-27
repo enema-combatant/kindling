@@ -35,9 +35,9 @@ def ask():
         # Send sources first as a JSON event
         yield f"event: sources\ndata: {json.dumps(chunks)}\n\n"
 
-        # Stream the answer
+        # Stream the answer (JSON-encode to handle newlines in SSE)
         for token in generate_stream(messages):
-            yield f"data: {token}\n\n"
+            yield f"data: {json.dumps(token)}\n\n"
         yield "data: [DONE]\n\n"
 
     return Response(

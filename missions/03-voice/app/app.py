@@ -37,12 +37,18 @@ def transcribe():
 @app.route("/ask-voice", methods=["POST"])
 def ask_voice():
     """Full voice pipeline: transcribe → RAG → TTS."""
-    if "audio" not in request.files:
-        return jsonify({"error": "No audio file"}), 400
+    # Allow text override from the typed input fallback
+    text_override = request.form.get("text_override", "").strip()
 
-    # Step 1: Speech to text
-    audio_bytes = request.files["audio"].read()
-    question = speech_to_text(audio_bytes)
+    if text_override:
+        question = text_override
+    elif "audio" in request.files:
+        audio_bytes = request.files["audio"].read()
+        if len(audio_bytes) == 0:
+            return jsonify({"error": "No audio recorded"}), 400
+        question = speech_to_text(audio_bytes)
+    else:
+        return jsonify({"error": "No audio or text provided"}), 400
 
     if not question:
         return jsonify({"error": "Could not understand audio"}), 400

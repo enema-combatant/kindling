@@ -193,11 +193,17 @@
                                     continue;
                                 }
                             } catch (e) {
-                                // Not JSON — it's a text token
+                                // Not sources JSON — it's a text token
+                                // Tokens are JSON-encoded strings to handle newlines in SSE
+                                try {
+                                    fullText += JSON.parse(data);
+                                } catch (e2) {
+                                    fullText += data;
+                                }
+                                aiMsg.textContent = fullText;
+                                continue;
                             }
 
-                            fullText += data;
-                            aiMsg.textContent = fullText;
                         }
                     }
 

@@ -157,12 +157,12 @@ def _call_ollama(messages: list[dict], config) -> dict:
     return resp.json()
 
 
-def _call_openai(messages: list[dict], config) -> dict:
-    """Send a chat request to OpenAI with tool definitions."""
+def _call_openai_compatible(messages: list[dict], config, base_url: str, api_key: str) -> dict:
+    """Send a chat request to an OpenAI-compatible API with tool definitions."""
     resp = requests.post(
-        "https://api.openai.com/v1/chat/completions",
+        f"{base_url}/chat/completions",
         headers={
-            "Authorization": f"Bearer {config.openai_api_key}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         },
         json={
@@ -212,7 +212,7 @@ def _call_anthropic(messages: list[dict], config) -> dict:
         "https://api.anthropic.com/v1/messages",
         headers={
             "x-api-key": config.anthropic_api_key,
-            "anthropic-version": "2023-06-01",
+            "anthropic-version": "2025-01-01",
             "Content-Type": "application/json",
         },
         json=body,
@@ -315,9 +315,11 @@ def run_agent(query: str, max_iterations: int = 10) -> dict:
     # Choose the right API caller
     call_llm = {
         "ollama": _call_ollama,
-        "openai": _call_openai,
+        "openai": lambda msgs, cfg: _call_openai_compatible(
+            msgs, cfg, "https://api.openai.com/v1", cfg.openai_api_key),
         "anthropic": _call_anthropic,
-        "groq": _call_openai,  # Groq is OpenAI-compatible
+        "groq": lambda msgs, cfg: _call_openai_compatible(
+            msgs, cfg, "https://api.groq.com/openai/v1", cfg.groq_api_key),
     }[provider]
 
     # Conversation history — the LLM sees everything

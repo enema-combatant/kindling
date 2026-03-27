@@ -91,7 +91,7 @@ def chat_endpoint():
         yield f"event: sources\ndata: {json.dumps(chunks)}\n\n"
 
         for token in stream(messages):
-            yield f"data: {token}\n\n"
+            yield f"data: {json.dumps(token)}\n\n"
         yield "data: [DONE]\n\n"
 
     return Response(
